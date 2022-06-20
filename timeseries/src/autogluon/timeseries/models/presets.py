@@ -84,6 +84,8 @@ def get_default_hps(key, prediction_length):
                     max(min(500, 12 * prediction_length), 4 * prediction_length),
                     default=prediction_length * 4,
                 ),
+                "batch_size": ag.Int(32, 256, default=32),
+                "learning_rate": ag.Real(0.0001, 0.1, log=True, default=0.001),
             },
             "DeepAR": {
                 "context_length": ag.Int(
@@ -91,6 +93,12 @@ def get_default_hps(key, prediction_length):
                     max(min(500, 12 * prediction_length), prediction_length),
                     default=prediction_length,
                 ),
+                "num_layers": ag.Int(1, 5, default=2),
+                "num_cells": ag.Int(20, 120, default=40),
+                "dropout_rate": ag.Real(0.01, 0.5, log=True, default=0.1),
+                "batch_size": ag.Int(32, 256, default=32),
+                "learning_rate": ag.Real(0.0001, 0.1, log=True, default=0.001),
+                "distr_output_str": ag.Categorical('StudentT', 'Gaussian')
             },
             "SimpleFeedForward": {
                 "context_length": ag.Int(
@@ -98,6 +106,11 @@ def get_default_hps(key, prediction_length):
                     max(min(500, 12 * prediction_length), prediction_length),
                     default=prediction_length,
                 ),
+                "num_layers": ag.Int(1, 5, default=2),
+                "hidden_size": ag.Int(20, 120, default=40),
+                "batch_size": ag.Int(32, 256, default=32),
+                "learning_rate": ag.Real(0.0001, 0.1, log=True, default=0.001),
+                "distr_output_str": ag.Categorical('StudentT', 'Gaussian')
             },
         },
     }

@@ -5,6 +5,7 @@ from gluonts.mx.trainer.callback import Callback
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_PATIENCE = 10
 
 
 class EpochCounter(Callback):
@@ -37,3 +38,26 @@ class TimeLimitCallback(Callback):
                 logger.warning("Time limit exceed during training, stop training.")
                 return False
         return True
+
+
+class GluonTSEarlyStoppingCallback(Callback):
+    """GluonTS callback to early stop the training if the validation loss
+    is not improved for `patience' round. For the GluonTS models used in autogluon,
+    the loss is always minimized.
+    """
+
+    def __init__(self, patience=DEFAULT_PATIENCE):
+        self.patience = patience
+        self.best_round = 0
+        self.best_loss = float("inf")
+
+    def on_validation_epoch_end(self, epoch_no, epoch_loss, **kwargs):
+        if epoch_loss < self.best_loss:
+            self.best_loss = epoch_loss
+            self.best_round = epoch_no
+            return True
+        else:
+            to_continue = (epoch_no - self.best_round) < self.patience
+            if not to_continue:
+                logger.warning(f"Early stopping triggered, stop training. Best epoch {self.best_round}")
+            return to_continue

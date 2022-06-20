@@ -15,8 +15,20 @@ with warning_filter():
     from gluonts.model.transformer import TransformerEstimator
     from gluonts.mx.context import get_mxnet_context
     from gluonts.nursery.autogluon_tabular import TabularEstimator
+    from gluonts.mx.trainer import Trainer
+    from gluonts.mx.distribution import StudentTOutput, GaussianOutput
 
 from .abstract_gluonts import AbstractGluonTSModel
+
+
+def _prepare_trainer_args(params):
+    learning_rate = params.get('learning_rate', None)
+    batch_size = params.get('batch_size', None)
+
+    args = {'learning_rate': learning_rate, 'batch_size': batch_size}
+    # when not set (None), using default values
+    trainer_args = {k: v for k, v in args.items() if v is not None}
+    return trainer_args
 
 
 class DeepARModel(AbstractGluonTSModel):
@@ -54,6 +66,20 @@ class DeepARModel(AbstractGluonTSModel):
 
     gluonts_estimator_class: Type[GluonTSEstimator] = DeepAREstimator
 
+    def _get_estimator(self):
+        trainer_args = _prepare_trainer_args(self.params)
+        self.params['trainer'] = Trainer(**trainer_args)
+
+        distri_output_str = self.params.get('distr_output_str', None)
+        if distri_output_str is not None:
+            output_distri_mapping = {'StudentT': StudentTOutput(), 'Gaussian': GaussianOutput()}
+            self.params['distr_output'] = output_distri_mapping[distri_output_str]
+
+        with warning_filter():
+            return self.gluonts_estimator_class.from_hyperparameters(
+                **self._get_estimator_init_args()
+            )
+
 
 class AbstractGluonTSSeq2SeqModel(AbstractGluonTSModel):
     """Abstract class for MQCNN and MQRNN which require hybridization to be turned off
@@ -62,6 +88,9 @@ class AbstractGluonTSSeq2SeqModel(AbstractGluonTSModel):
     gluonts_estimator_class: Type[GluonTSEstimator] = None
 
     def _get_estimator(self):
+        trainer_args = _prepare_trainer_args(self.params)
+        self.params['trainer'] = Trainer(**trainer_args)
+
         if get_mxnet_context() != mx.context.cpu():
             self.params["hybridize"] = False
 
@@ -157,6 +186,25 @@ class SimpleFeedForwardModel(AbstractGluonTSModel):
     """
 
     gluonts_estimator_class: Type[GluonTSEstimator] = SimpleFeedForwardEstimator
+
+    def _get_estimator(self):
+        if self.params['num_layers'] is not None and self.params['hidden_size'] is not None:
+            n_layers = self.params['num_layers']
+            hidden_size = self.params['hidden_size']
+            self.params['num_hidden_dimensions'] = [hidden_size for _ in range(n_layers)]
+
+        trainer_args = _prepare_trainer_args(self.params)
+        self.params['trainer'] = Trainer(**trainer_args)
+
+        distri_output_str = self.params.get('distr_output_str', None)
+        if distri_output_str is not None:
+            output_distri_mapping = {'StudentT': StudentTOutput(), 'Gaussian': GaussianOutput()}
+            self.params['distr_output'] = output_distri_mapping[distri_output_str]
+
+        with warning_filter():
+            return self.gluonts_estimator_class.from_hyperparameters(
+                **self._get_estimator_init_args()
+            )
 
 
 class TransformerModel(AbstractGluonTSModel):

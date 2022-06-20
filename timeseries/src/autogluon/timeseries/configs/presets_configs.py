@@ -9,7 +9,7 @@ TIMESERIES_PRESETS_CONFIGS = dict(
         "hyperparameter_tune_kwargs": {
             "scheduler": "local",
             "searcher": "random",
-            "num_trials": 20,
+            "num_trials": 50,
         },
     },
     high_quality={
