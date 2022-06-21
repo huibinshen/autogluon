@@ -23,9 +23,7 @@ from .abstract_gluonts import AbstractGluonTSModel
 
 def _prepare_trainer_args(params):
     learning_rate = params.get('learning_rate', None)
-    batch_size = params.get('batch_size', None)
-
-    args = {'learning_rate': learning_rate, 'batch_size': batch_size}
+    args = {'learning_rate': learning_rate}
     # when not set (None), using default values
     trainer_args = {k: v for k, v in args.items() if v is not None}
     return trainer_args
@@ -70,8 +68,15 @@ class DeepARModel(AbstractGluonTSModel):
         trainer_args = _prepare_trainer_args(self.params)
         self.params['trainer'] = Trainer(**trainer_args)
 
+        architecture = self.params.get('architecture', None)
+        if architecture:
+            architecture_mapping = {1: [1, 20], 2: [2, 40], 3: [4, 80]}
+            num_layers, num_cells = architecture_mapping[architecture]
+            self.params['num_layers'] = num_layers
+            self.params['num_cells'] = num_cells
+
         distri_output_str = self.params.get('distr_output_str', None)
-        if distri_output_str is not None:
+        if distri_output_str:
             output_distri_mapping = {'StudentT': StudentTOutput(), 'Gaussian': GaussianOutput()}
             self.params['distr_output'] = output_distri_mapping[distri_output_str]
 
@@ -188,13 +193,14 @@ class SimpleFeedForwardModel(AbstractGluonTSModel):
     gluonts_estimator_class: Type[GluonTSEstimator] = SimpleFeedForwardEstimator
 
     def _get_estimator(self):
-        if self.params['num_layers'] is not None and self.params['hidden_size'] is not None:
-            n_layers = self.params['num_layers']
-            hidden_size = self.params['hidden_size']
-            self.params['num_hidden_dimensions'] = [hidden_size for _ in range(n_layers)]
-
         trainer_args = _prepare_trainer_args(self.params)
         self.params['trainer'] = Trainer(**trainer_args)
+
+        architecture = self.params.get('architecture', None)
+        if architecture:
+            architecture_mapping = {1: [1, 30], 2: [2, 40], 3: [4, 80]}
+            n_layers, hidden_size = architecture_mapping[architecture]
+            self.params['num_hidden_dimensions'] = [hidden_size for _ in range(n_layers)]
 
         distri_output_str = self.params.get('distr_output_str', None)
         if distri_output_str is not None:
